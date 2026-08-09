@@ -190,12 +190,10 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ slug, onNavigate }
       console.log("APPLICATION JOB_ID:", applicationPayload.job_id);
       console.log("JOB APPLICATION PAYLOAD:", applicationPayload);
 
-      // 3. Single insertion into job_applications
-      const { data, error } = await supabase
+      // 3. Insert-only into job_applications without .select() (write-only for anonymous users)
+      const { error } = await supabase
         .from("job_applications")
-        .insert(applicationPayload)
-        .select()
-        .single();
+        .insert(applicationPayload);
 
       if (error) {
         console.error("JOB APPLICATION ERROR:", error);
@@ -210,7 +208,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ slug, onNavigate }
         return;
       }
 
-      console.log("JOB APPLICATION RESULT:", data);
+      console.log("JOB APPLICATION SUBMITTED SUCCESSFULLY");
       setSubmitted(true);
     } catch (err: any) {
       console.error("Catch job application submit error:", err);
