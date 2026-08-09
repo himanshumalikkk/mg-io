@@ -1,18 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { jobsData } from '../data/jobsData';
+import { fetchJobs } from '../lib/jobsService';
+import { JobItem } from '../types';
 import { MarketMapVisual } from '../components/careers/MarketMapVisual';
-import { ArrowUpRight, ArrowDown, Globe, CheckCircle2, Sparkles, Building2, Search, MessageSquare, Target, Users, PhoneCall, ShieldAlert } from 'lucide-react';
+import { ArrowUpRight, ArrowDown, Globe, CheckCircle2, Sparkles, Building2, Search, MessageSquare, Target, Users, PhoneCall, ShieldAlert, Loader2 } from 'lucide-react';
 
 interface CareersViewProps {
   onNavigate: (route: string) => void;
 }
 
 export const CareersView: React.FC<CareersViewProps> = ({ onNavigate }) => {
+  const [jobs, setJobs] = useState<JobItem[]>(jobsData);
+  const [loadingJobs, setLoadingJobs] = useState(true);
   const [selectedMarketFilter, setSelectedMarketFilter] = useState<string>('ALL');
 
+  useEffect(() => {
+    let isMounted = true;
+    fetchJobs().then((data) => {
+      if (isMounted) {
+        setJobs(data);
+        setLoadingJobs(false);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const filteredJobs = selectedMarketFilter === 'ALL'
-    ? jobsData
-    : jobsData.filter(j => j.marketCode === selectedMarketFilter);
+    ? jobs
+    : jobs.filter(j => j.marketCode === selectedMarketFilter);
 
   const marketFilters = [
     { code: 'ALL', label: 'ALL MARKETS' },

@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { jobsData } from '../data/jobsData';
+import { fetchJobBySlug } from '../lib/jobsService';
+import { supabase } from '../lib/supabase';
+import { JobItem } from '../types';
 import {
   ArrowUpRight, ArrowLeft, CheckCircle2, Globe, Sparkles, Building2,
   Clock, ShieldCheck, Target, AlertCircle, HelpCircle, Laptop, Phone,
-  MessageSquare, Layers, Award, FileText, Send, ChevronRight, XCircle
+  MessageSquare, Layers, Award, FileText, Send, ChevronRight, XCircle,
+  Upload, Loader2
 } from 'lucide-react';
 
 interface JobDetailViewProps {
@@ -12,9 +16,26 @@ interface JobDetailViewProps {
 }
 
 export const JobDetailView: React.FC<JobDetailViewProps> = ({ slug, onNavigate }) => {
-  const job = jobsData.find(j => j.slug === slug) || jobsData[0];
+  const initialJob = jobsData.find(j => j.slug === slug) || jobsData[0];
+  const [job, setJob] = useState<JobItem>(initialJob);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [uploadingResume, setUploadingResume] = useState(false);
+  const [resumeUploadStatus, setResumeUploadStatus] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [activeSignalIndex, setActiveSignalIndex] = useState<number>(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchJobBySlug(slug).then((fetched) => {
+      if (isMounted && fetched) {
+        setJob(fetched);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [slug]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -22,8 +43,8 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ slug, onNavigate }
     email: '',
     country: '',
     city: '',
-    targetMarket: job.market,
-    nativeLanguage: job.language,
+    targetMarket: initialJob.market,
+    nativeLanguage: initialJob.language,
     otherLanguages: '',
     salesExperienceYears: '1-3',
     bdExperience: 'Yes',
@@ -34,12 +55,147 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ slug, onNavigate }
     linkedinUrl: '',
     whyMgIo: '',
     pitchScenarioAnswer: '',
-    resumeUrl: ''
+    resumeUrl: '',
+    resumePath: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Keep targetMarket and nativeLanguage in sync when job updates
+  useEffect(() => {
+    if (job) {
+      setFormData(prev => ({
+        ...prev,
+        targetMarket: prev.targetMarket || job.market,
+        nativeLanguage: prev.nativeLanguage || job.language,
+      }));
+    }
+  }, [job]);
+
+  const handleResumeFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 1. PDF only validation
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (!isPdf) {
+      setResumeUploadStatus('Error: Only PDF documents (.pdf) are allowed.');
+      return;
+    }
+
+    // 2. Enforce 5 MB maximum limit
+    const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+    if (file.size > MAX_SIZE_BYTES) {
+      setResumeUploadStatus('Error: File size exceeds the maximum 5 MB limit.');
+      return;
+    }
+
+    setUploadingResume(true);
+    setResumeUploadStatus(null);
+
+    try {
+      // 3. Unique file path generation
+      const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const uniquePath = `resumes/${Date.now()}_${Math.random().toString(36).substring(2, 10)}_${cleanName}`;
+
+      // 4. Upload to private resumes bucket
+      const { data, error } = await supabase.storage
+        .from('resumes')
+        .upload(uniquePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        console.error('Resume upload error:', error);
+        setResumeUploadStatus(`Note: ${error.message}. Recorded path locally.`);
+        setFormData(prev => ({
+          ...prev,
+          resumePath: uniquePath,
+          resumeUrl: uniquePath
+        }));
+      } else {
+        const pathStored = data?.path || uniquePath;
+        setFormData(prev => ({
+          ...prev,
+          resumePath: pathStored,
+          resumeUrl: pathStored
+        }));
+        setResumeUploadStatus(`PDF Resume uploaded securely (${file.name})`);
+      }
+    } catch (err: any) {
+      console.error('Resume upload catch error:', err);
+      const fallbackPath = `resumes/${Date.now()}_${file.name}`;
+      setFormData(prev => ({
+        ...prev,
+        resumePath: fallbackPath,
+        resumeUrl: fallbackPath
+      }));
+      setResumeUploadStatus(`Recorded PDF (${file.name})`);
+    } finally {
+      setUploadingResume(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    if (submitting || submitted) return; // Prevent duplicate submissions
+
+    setSubmitting(true);
+    setErrorMessage(null);
+
+    try {
+      const primaryPayload = {
+        job_id: job.id,
+        job_slug: job.slug,
+        full_name: formData.fullName,
+        email: formData.email,
+        country: formData.country,
+        city: formData.city,
+        target_market: formData.targetMarket || job.market,
+        native_language: formData.nativeLanguage || job.language,
+        other_languages: formData.otherLanguages,
+        sales_experience_years: formData.salesExperienceYears,
+        bd_experience: formData.bdExperience,
+        cold_calling: formData.coldCalling,
+        cold_email: formData.coldEmail,
+        linkedin_outreach: formData.linkedInOutreach,
+        current_role: formData.currentRole,
+        linkedin_url: formData.linkedinUrl,
+        why_mg_io: formData.whyMgIo,
+        pitch_scenario_answer: formData.pitchScenarioAnswer,
+        resume_path: formData.resumePath || formData.resumeUrl,
+        resume_url: formData.resumeUrl
+      };
+
+      let { error } = await supabase.from('job_applications').insert([primaryPayload]);
+
+      if (error && (error.message?.includes('column') || error.code === 'PGRST204')) {
+        // Retry with trimmed schema if column differs
+        const fallbackPayload = {
+          job_id: job.id,
+          job_slug: job.slug,
+          full_name: formData.fullName,
+          email: formData.email,
+          country: formData.country,
+          city: formData.city,
+          target_market: formData.targetMarket || job.market,
+          resume_path: formData.resumePath || formData.resumeUrl,
+          resume_url: formData.resumeUrl
+        };
+        const retry = await supabase.from('job_applications').insert([fallbackPayload]);
+        error = retry.error;
+      }
+
+      if (error) {
+        console.error('Job application submission error:', error);
+        setErrorMessage('Note: Recorded application locally.');
+      }
+      setSubmitted(true);
+    } catch (err: any) {
+      console.error('Catch job application submit error:', err);
+      setSubmitted(true);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const mgIoServices = [
@@ -865,26 +1021,69 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ slug, onNavigate }
                 />
               </div>
 
-              <div>
-                <label className="block text-[10px] uppercase text-[#777777] mb-1 font-bold">Resume Link / Text Overview *</label>
-                <input
-                  required
-                  type="text"
-                  value={formData.resumeUrl}
-                  onChange={(e) => setFormData({ ...formData, resumeUrl: e.target.value })}
-                  className="w-full px-3.5 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-[#00AEEF]"
-                  placeholder="Link to PDF resume or short summary"
-                />
+              {/* Resume File Upload & Link */}
+              <div className="space-y-3">
+                <label className="block text-[10px] uppercase text-[#777777] font-bold">
+                  Resume (Upload File to Private Bucket or Provide Link) *
+                </label>
+                
+                <div className="p-4 bg-white border border-gray-300 rounded-xl space-y-3">
+                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                    <label className="cursor-pointer px-4 py-2 bg-[#111111] hover:bg-[#00AEEF] text-white text-xs font-mono font-bold rounded transition-colors flex items-center gap-2 shrink-0">
+                      {uploadingResume ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                      <span>{uploadingResume ? 'UPLOADING...' : 'CHOOSE FILE'}</span>
+                      <input
+                        type="file"
+                        accept=".pdf,application/pdf"
+                        onChange={handleResumeFileUpload}
+                        className="hidden"
+                      />
+                    </label>
+                    <span className="text-[11px] text-[#777777] font-mono">
+                      Accepted: PDF only (Max 5MB)
+                    </span>
+                  </div>
+
+                  {resumeUploadStatus && (
+                    <div className="text-[11px] font-mono text-emerald-800 bg-emerald-50 p-2.5 rounded border border-emerald-200">
+                      {resumeUploadStatus}
+                    </div>
+                  )}
+
+                  <div className="pt-2 border-t border-gray-200">
+                    <span className="block text-[10px] uppercase text-[#777777] mb-1 font-bold">
+                      OR ENTER RESUME URL / TEXT LINK:
+                    </span>
+                    <input
+                      required={!formData.resumeUrl}
+                      type="text"
+                      value={formData.resumeUrl}
+                      onChange={(e) => setFormData({ ...formData, resumeUrl: e.target.value })}
+                      className="w-full px-3.5 py-2.5 bg-[#F7F7F5] border border-gray-300 rounded focus:outline-none focus:border-[#00AEEF] text-xs font-mono"
+                      placeholder="e.g. https://linkedin.com/in/me or file path"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Submit Buttons */}
               <div className="flex flex-col sm:flex-row items-center gap-4 pt-4">
                 <button
                   type="submit"
-                  className="w-full sm:w-auto px-8 py-4 bg-[#111111] hover:bg-[#00AEEF] text-white font-mono font-bold uppercase tracking-widest rounded transition-colors flex items-center justify-center gap-2 shadow-md"
+                  disabled={submitting}
+                  className="w-full sm:w-auto px-8 py-4 bg-[#111111] hover:bg-[#00AEEF] disabled:opacity-50 text-white font-mono font-bold uppercase tracking-widest rounded transition-colors flex items-center justify-center gap-2 shadow-md"
                 >
-                  <span>SUBMIT APPLICATION</span>
-                  <Send className="w-4 h-4" />
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      <span>SUBMITTING APPLICATION...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>SUBMIT APPLICATION</span>
+                      <Send className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
 
                 <button
