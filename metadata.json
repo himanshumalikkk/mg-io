@@ -1,0 +1,6 @@
+{
+  "name": "MG.IO",
+  "description": "Digital Technology Agency — Websites, AI Systems, Automation & Growth Solutions",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
