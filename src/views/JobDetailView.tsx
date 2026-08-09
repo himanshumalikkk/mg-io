@@ -143,35 +143,28 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ slug, onNavigate }
     setErrorMessage(null);
 
     try {
-      // 1. Resolve real DB job_id
-      let targetJobId = job.id;
-      const { data: dbJobBySlug } = await supabase
-        .from('jobs')
-        .select('id, slug')
-        .eq('slug', slug)
-        .maybeSingle();
+      // 1. Resolve real DB job against public.jobs using slug
+      const { data: resolvedJob, error: jobError } = await supabase
+        .from("jobs")
+        .select("id, slug")
+        .eq("slug", slug)
+        .eq("is_open", true)
+        .single();
 
-      if (dbJobBySlug && dbJobBySlug.id) {
-        targetJobId = dbJobBySlug.id;
-      } else {
-        const { data: anyJob } = await supabase
-          .from('jobs')
-          .select('id')
-          .limit(1)
-          .maybeSingle();
-        if (anyJob && anyJob.id) {
-          targetJobId = anyJob.id;
-        }
+      if (jobError || !resolvedJob?.id) {
+        console.error("Job resolution error:", jobError);
+        throw new Error("Unable to resolve the selected job from the database.");
       }
 
-      console.log("JOB ID:", targetJobId);
-      console.log("JOB ID TYPE:", typeof targetJobId);
+      console.log("JOB SLUG:", slug);
+      console.log("RESOLVED JOB:", resolvedJob);
+      console.log("RESOLVED JOB UUID:", resolvedJob.id);
 
       const toNull = (val?: string | null) => (val && val.trim() !== '' ? val.trim() : null);
 
       // 2. Prepare payload matching public.job_applications exact columns
-      const applicationData = {
-        job_id: targetJobId,
+      const applicationPayload = {
+        job_id: resolvedJob.id,
         full_name: formData.fullName.trim(),
         email: formData.email.trim(),
         country: formData.country.trim(),
@@ -194,41 +187,18 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ slug, onNavigate }
         status: 'new'
       };
 
-      console.log("JOB APPLICATION PAYLOAD:", applicationData);
+      console.log("APPLICATION JOB_ID:", applicationPayload.job_id);
+      console.log("JOB APPLICATION PAYLOAD:", applicationPayload);
 
-      let { data: insertedData, error: insertError } = await supabase
+      // 3. Single insertion into job_applications
+      const { data, error } = await supabase
         .from("job_applications")
-        .insert([applicationData])
-        .select();
+        .insert(applicationPayload)
+        .select()
+        .single();
 
-      console.log("JOB APPLICATION RESULT:", insertedData);
-      console.error("JOB APPLICATION ERROR:", insertError);
-
-      if (insertError) {
-        console.warn("Primary insertion encountered error, attempting compatible fallback payload...");
-        const fallbackPayload = {
-          job_id: targetJobId,
-          full_name: formData.fullName.trim(),
-          email: formData.email.trim(),
-          country: formData.country.trim(),
-          city_region: formData.city.trim(),
-          target_market: toNull(formData.targetMarket || job.market),
-          resume_path: toNull(formData.resumePath || formData.resumeUrl),
-          status: 'new'
-        };
-        const retry = await supabase
-          .from("job_applications")
-          .insert([fallbackPayload])
-          .select();
-
-        if (!retry.error && retry.data) {
-          insertedData = retry.data;
-          insertError = null;
-        }
-      }
-
-      if (insertError) {
-        // Clean up resume if upload occurred prior to insert failure
+      if (error) {
+        console.error("JOB APPLICATION ERROR:", error);
         if (formData.resumePath) {
           try {
             await supabase.storage.from('resumes').remove([formData.resumePath]);
@@ -236,10 +206,11 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ slug, onNavigate }
             console.warn("Could not remove orphaned resume file:", cleanupErr);
           }
         }
-        setErrorMessage(insertError.message || "Error submitting job application.");
-        return; // CRITICAL: Stop execution, do not show success screen
+        setErrorMessage(error.message || "Error submitting job application.");
+        return;
       }
 
+      console.log("JOB APPLICATION RESULT:", data);
       setSubmitted(true);
     } catch (err: any) {
       console.error("Catch job application submit error:", err);

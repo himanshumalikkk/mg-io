@@ -14,20 +14,28 @@ export function mapDbRowToJobItem(row: any): JobItem {
     department: row.department || 'Business Development',
     roleType: row.role_type || row.roleType || 'Market Growth / Sales',
     experience: row.experience || 'Communication Proficiency',
-    aboutRole: row.about_role || row.aboutRole || '',
+    aboutRole: row.about_role || row.aboutRole || row.description || '',
     whatYouWillDo: Array.isArray(row.what_you_will_do)
       ? row.what_you_will_do
       : Array.isArray(row.whatYouWillDo)
       ? row.whatYouWillDo
+      : Array.isArray(row.responsibilities)
+      ? row.responsibilities
       : typeof row.what_you_will_do === 'string'
       ? JSON.parse(row.what_you_will_do)
+      : typeof row.responsibilities === 'string'
+      ? JSON.parse(row.responsibilities)
       : [],
     whatWeAreLookingFor: Array.isArray(row.what_we_are_looking_for)
       ? row.what_we_are_looking_for
       : Array.isArray(row.whatWeAreLookingFor)
       ? row.whatWeAreLookingFor
+      : Array.isArray(row.requirements)
+      ? row.requirements
       : typeof row.what_we_are_looking_for === 'string'
       ? JSON.parse(row.what_we_are_looking_for)
+      : typeof row.requirements === 'string'
+      ? JSON.parse(row.requirements)
       : [],
     niceToHave: Array.isArray(row.nice_to_have)
       ? row.nice_to_have
