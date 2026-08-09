@@ -980,32 +980,18 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ slug, onNavigate }
               </div>
 
               {/* Sales & Outreach Background */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] uppercase text-[#777777] mb-1 font-bold">Years of Sales Experience *</label>
-                  <select
-                    value={formData.salesExperienceYears}
-                    onChange={(e) => setFormData({ ...formData, salesExperienceYears: e.target.value })}
-                    className="w-full px-3.5 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-[#00AEEF]"
-                  >
-                    <option value="0">Less than 1 year</option>
-                    <option value="1-3">1 - 3 years</option>
-                    <option value="3-5">3 - 5 years</option>
-                    <option value="5+">5+ years</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] uppercase text-[#777777] mb-1 font-bold">Portfolio / LinkedIn URL *</label>
-                  <input
-                    required
-                    type="url"
-                    value={formData.linkedinUrl}
-                    onChange={(e) => setFormData({ ...formData, linkedinUrl: e.target.value })}
-                    className="w-full px-3.5 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-[#00AEEF]"
-                    placeholder="https://linkedin.com/in/yourprofile"
-                  />
-                </div>
+              <div>
+                <label className="block text-[10px] uppercase text-[#777777] mb-1 font-bold">Years of Sales Experience *</label>
+                <select
+                  value={formData.salesExperienceYears}
+                  onChange={(e) => setFormData({ ...formData, salesExperienceYears: e.target.value })}
+                  className="w-full px-3.5 py-3 bg-white border border-gray-300 rounded focus:outline-none focus:border-[#00AEEF]"
+                >
+                  <option value="0">Less than 1 year</option>
+                  <option value="1-3">1 - 3 years</option>
+                  <option value="3-5">3 - 5 years</option>
+                  <option value="5+">5+ years</option>
+                </select>
               </div>
 
               {/* Outreach Checkboxes */}
@@ -1072,10 +1058,10 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ slug, onNavigate }
                 />
               </div>
 
-              {/* Resume File Upload & Link */}
+              {/* Resume File Upload */}
               <div className="space-y-3">
                 <label className="block text-[10px] uppercase text-[#777777] font-bold">
-                  Resume (Upload File to Private Bucket or Provide Link) *
+                  Resume (PDF File Upload) *
                 </label>
                 
                 <div className="p-4 bg-white border border-gray-300 rounded-xl space-y-3">
@@ -1100,20 +1086,6 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ slug, onNavigate }
                       {resumeUploadStatus}
                     </div>
                   )}
-
-                  <div className="pt-2 border-t border-gray-200">
-                    <span className="block text-[10px] uppercase text-[#777777] mb-1 font-bold">
-                      OR ENTER RESUME URL / TEXT LINK:
-                    </span>
-                    <input
-                      required={!formData.resumeUrl}
-                      type="text"
-                      value={formData.resumeUrl}
-                      onChange={(e) => setFormData({ ...formData, resumeUrl: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-[#F7F7F5] border border-gray-300 rounded focus:outline-none focus:border-[#00AEEF] text-xs font-mono"
-                      placeholder="e.g. https://linkedin.com/in/me or file path"
-                    />
-                  </div>
                 </div>
               </div>
 
