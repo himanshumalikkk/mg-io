@@ -56,12 +56,13 @@ export const ContactView: React.FC<ContactViewProps> = ({ onNavigate }) => {
 
       if (error) {
         console.error('Supabase contact submission error:', error);
-        setErrorMessage('Note: Unable to reach database server. Your submission has been processed locally.');
+        setErrorMessage(error.message || 'Unable to submit inquiry. Please try again.');
+        return;
       }
       setSubmitted(true);
     } catch (err: any) {
       console.error('Submission catch error:', err);
-      setSubmitted(true);
+      setErrorMessage(err.message || 'Submission error. Please try again.');
     } finally {
       setSubmitting(false);
     }

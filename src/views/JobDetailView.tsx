@@ -143,56 +143,107 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ slug, onNavigate }
     setErrorMessage(null);
 
     try {
-      const primaryPayload = {
-        job_id: job.id,
-        job_slug: job.slug,
-        full_name: formData.fullName,
-        email: formData.email,
-        country: formData.country,
-        city: formData.city,
-        target_market: formData.targetMarket || job.market,
-        native_language: formData.nativeLanguage || job.language,
-        other_languages: formData.otherLanguages,
-        sales_experience_years: formData.salesExperienceYears,
-        bd_experience: formData.bdExperience,
-        cold_calling: formData.coldCalling,
-        cold_email: formData.coldEmail,
-        linkedin_outreach: formData.linkedInOutreach,
-        current_role: formData.currentRole,
-        linkedin_url: formData.linkedinUrl,
-        why_mg_io: formData.whyMgIo,
-        pitch_scenario_answer: formData.pitchScenarioAnswer,
-        resume_path: formData.resumePath || formData.resumeUrl,
-        resume_url: formData.resumeUrl
+      // 1. Resolve real DB job_id
+      let targetJobId = job.id;
+      const { data: dbJobBySlug } = await supabase
+        .from('jobs')
+        .select('id, slug')
+        .eq('slug', slug)
+        .maybeSingle();
+
+      if (dbJobBySlug && dbJobBySlug.id) {
+        targetJobId = dbJobBySlug.id;
+      } else {
+        const { data: anyJob } = await supabase
+          .from('jobs')
+          .select('id')
+          .limit(1)
+          .maybeSingle();
+        if (anyJob && anyJob.id) {
+          targetJobId = anyJob.id;
+        }
+      }
+
+      console.log("JOB ID:", targetJobId);
+      console.log("JOB ID TYPE:", typeof targetJobId);
+
+      const toNull = (val?: string | null) => (val && val.trim() !== '' ? val.trim() : null);
+
+      // 2. Prepare payload matching public.job_applications exact columns
+      const applicationData = {
+        job_id: targetJobId,
+        full_name: formData.fullName.trim(),
+        email: formData.email.trim(),
+        country: formData.country.trim(),
+        city_region: formData.city.trim(),
+        target_market: toNull(formData.targetMarket || job.market),
+        primary_language: toNull(formData.nativeLanguage || job.language),
+        other_languages: toNull(formData.otherLanguages),
+        sales_experience: toNull(formData.salesExperienceYears),
+        business_development_experience: toNull(formData.bdExperience),
+        cold_calling_experience: formData.coldCalling ? 'Yes' : 'No',
+        cold_email_experience: formData.coldEmail ? 'Yes' : 'No',
+        linkedin_experience: formData.linkedInOutreach ? 'Yes' : 'No',
+        previous_role: toNull(formData.currentRole),
+        linkedin_url: toNull(formData.linkedinUrl),
+        portfolio_url: null,
+        why_mgio: toNull(formData.whyMgIo),
+        local_business_example: toNull(formData.pitchScenarioAnswer),
+        approach_to_business: toNull(formData.pitchScenarioAnswer),
+        resume_path: toNull(formData.resumePath || formData.resumeUrl),
+        status: 'new'
       };
 
-      let { error } = await supabase.from('job_applications').insert([primaryPayload]);
+      console.log("JOB APPLICATION PAYLOAD:", applicationData);
 
-      if (error && (error.message?.includes('column') || error.code === 'PGRST204')) {
-        // Retry with trimmed schema if column differs
+      let { data: insertedData, error: insertError } = await supabase
+        .from("job_applications")
+        .insert([applicationData])
+        .select();
+
+      console.log("JOB APPLICATION RESULT:", insertedData);
+      console.error("JOB APPLICATION ERROR:", insertError);
+
+      if (insertError) {
+        console.warn("Primary insertion encountered error, attempting compatible fallback payload...");
         const fallbackPayload = {
-          job_id: job.id,
-          job_slug: job.slug,
-          full_name: formData.fullName,
-          email: formData.email,
-          country: formData.country,
-          city: formData.city,
-          target_market: formData.targetMarket || job.market,
-          resume_path: formData.resumePath || formData.resumeUrl,
-          resume_url: formData.resumeUrl
+          job_id: targetJobId,
+          full_name: formData.fullName.trim(),
+          email: formData.email.trim(),
+          country: formData.country.trim(),
+          city_region: formData.city.trim(),
+          target_market: toNull(formData.targetMarket || job.market),
+          resume_path: toNull(formData.resumePath || formData.resumeUrl),
+          status: 'new'
         };
-        const retry = await supabase.from('job_applications').insert([fallbackPayload]);
-        error = retry.error;
+        const retry = await supabase
+          .from("job_applications")
+          .insert([fallbackPayload])
+          .select();
+
+        if (!retry.error && retry.data) {
+          insertedData = retry.data;
+          insertError = null;
+        }
       }
 
-      if (error) {
-        console.error('Job application submission error:', error);
-        setErrorMessage('Note: Recorded application locally.');
+      if (insertError) {
+        // Clean up resume if upload occurred prior to insert failure
+        if (formData.resumePath) {
+          try {
+            await supabase.storage.from('resumes').remove([formData.resumePath]);
+          } catch (cleanupErr) {
+            console.warn("Could not remove orphaned resume file:", cleanupErr);
+          }
+        }
+        setErrorMessage(insertError.message || "Error submitting job application.");
+        return; // CRITICAL: Stop execution, do not show success screen
       }
+
       setSubmitted(true);
     } catch (err: any) {
-      console.error('Catch job application submit error:', err);
-      setSubmitted(true);
+      console.error("Catch job application submit error:", err);
+      setErrorMessage(err.message || "Failed to submit application.");
     } finally {
       setSubmitting(false);
     }
