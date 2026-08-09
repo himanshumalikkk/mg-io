@@ -3,7 +3,7 @@ import { JobItem } from '../types';
 export const jobsData: JobItem[] = [
   {
     id: 'mga-spanish',
-    slug: 'market-growth-agent-spanish',
+    slug: 'mga-spanish',
     title: 'MARKET GROWTH AGENT — SPANISH MARKET',
     marketCode: 'SPANISH',
     market: 'Spain & Spanish-speaking markets',
@@ -41,7 +41,7 @@ export const jobsData: JobItem[] = [
   },
   {
     id: 'mga-german',
-    slug: 'market-growth-agent-german',
+    slug: 'mga-german',
     title: 'MARKET GROWTH AGENT — GERMAN MARKET',
     marketCode: 'GERMAN',
     market: 'German-speaking market (DACH)',
@@ -79,7 +79,7 @@ export const jobsData: JobItem[] = [
   },
   {
     id: 'mga-french',
-    slug: 'market-growth-agent-french',
+    slug: 'mga-french',
     title: 'MARKET GROWTH AGENT — FRENCH MARKET',
     marketCode: 'FRENCH',
     market: 'French-speaking market',
@@ -117,7 +117,7 @@ export const jobsData: JobItem[] = [
   },
   {
     id: 'mga-italian',
-    slug: 'market-growth-agent-italian',
+    slug: 'mga-italian',
     title: 'MARKET GROWTH AGENT — ITALIAN MARKET',
     marketCode: 'ITALIAN',
     market: 'Italy & Italian-speaking markets',
@@ -155,7 +155,7 @@ export const jobsData: JobItem[] = [
   },
   {
     id: 'mga-portuguese',
-    slug: 'market-growth-agent-portuguese',
+    slug: 'mga-portuguese',
     title: 'MARKET GROWTH AGENT — PORTUGUESE MARKET',
     marketCode: 'PORTUGUESE',
     market: 'Portugal & Portuguese-speaking markets',
@@ -193,7 +193,7 @@ export const jobsData: JobItem[] = [
   },
   {
     id: 'mga-english',
-    slug: 'market-growth-agent-english',
+    slug: 'mga-english',
     title: 'MARKET GROWTH AGENT — ENGLISH / INTERNATIONAL',
     marketCode: 'ENGLISH',
     market: 'International & Global Enterprise',

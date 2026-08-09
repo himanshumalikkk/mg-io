@@ -35,9 +35,23 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               <span className="text-[10px] font-mono tracking-widest text-[#555555] uppercase block mb-4">
                 DIGITAL TECHNOLOGY AGENCY
               </span>
-              <p className="text-xs text-[#555555] max-w-sm leading-relaxed mb-6">
+              <p className="text-xs text-[#555555] max-w-sm leading-relaxed mb-4">
                 Designing websites, AI systems, business automation, and digital growth platforms for companies ready to scale.
               </p>
+              <div className="space-y-1 text-xs font-mono mb-6 text-[#111111]">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-[#777777] font-bold uppercase">EMAIL:</span>
+                  <a href="mailto:malik.businessweb@gmail.com" className="font-bold hover:text-[#00AEEF] transition-colors">
+                    malik.businessweb@gmail.com
+                  </a>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-[#777777] font-bold uppercase">TEL:</span>
+                  <a href="tel:+91922820685" className="font-bold hover:text-[#00AEEF] transition-colors">
+                    +91 92282 0685
+                  </a>
+                </div>
+              </div>
             </div>
 
             <div>

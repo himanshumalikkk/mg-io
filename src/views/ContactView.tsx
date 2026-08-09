@@ -268,7 +268,19 @@ export const ContactView: React.FC<ContactViewProps> = ({ onNavigate }) => {
                   <Mail className="w-4 h-4 text-[#00AEEF] shrink-0" />
                   <div>
                     <span className="text-[10px] text-[#777777] block uppercase">EMAIL</span>
-                    <a href="mailto:hello@mg.io" className="font-bold hover:text-[#00AEEF]">hello@mg.io</a>
+                    <a href="mailto:malik.businessweb@gmail.com" className="font-bold hover:text-[#00AEEF] transition-colors">
+                      malik.businessweb@gmail.com
+                    </a>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Phone className="w-4 h-4 text-[#00AEEF] shrink-0" />
+                  <div>
+                    <span className="text-[10px] text-[#777777] block uppercase">PHONE / DIRECT</span>
+                    <a href="tel:+91922820685" className="font-bold hover:text-[#00AEEF] transition-colors">
+                      +91 92282 0685
+                    </a>
                   </div>
                 </div>
 
@@ -276,7 +288,7 @@ export const ContactView: React.FC<ContactViewProps> = ({ onNavigate }) => {
                   <MessageSquare className="w-4 h-4 text-[#00AEEF] shrink-0" />
                   <div>
                     <span className="text-[10px] text-[#777777] block uppercase">WHATSAPP DIRECT</span>
-                    <a href="https://wa.me/?text=Hello%20MG.IO" target="_blank" rel="noopener noreferrer" className="font-bold hover:text-[#00AEEF]">
+                    <a href="https://wa.me/91922820685?text=Hello%20MG.IO" target="_blank" rel="noopener noreferrer" className="font-bold hover:text-[#00AEEF] transition-colors">
                       Connect via WhatsApp →
                     </a>
                   </div>
